@@ -3,6 +3,7 @@ import os
 import streamlit as st
 import pandas as pd
 import random
+import pydeck as pdk
 from dotenv import load_dotenv
 from utils.b2 import B2
 
@@ -19,19 +20,20 @@ b2 = B2(
     secret_key=os.getenv('B2_APPKEY')
 )
 
+@st.cache_data
 def fetch_data():
     try:
-        b2.set_bucket('AirBnB-Bucket')  # Set the bucket
+        b2.set_bucket('AirBnB-CSV')  # Set the bucket
         obj = b2.get_object('Airbnb Dataset_Long.csv')  # Use the EXACT file name
         return pd.read_csv(obj)
     except Exception as e:
         st.error(f"Error fetching data from Backblaze: {e}")
         return None
 
-# APPLICATION Title
+# APPLICATION
 st.title("Airbnb Data Viewer")
 
-# Buyer and Seller buttons
+# Main Page with Buyer and Seller buttons
 if "page" not in st.session_state:
     st.session_state.page = "main"
 
@@ -45,40 +47,86 @@ if st.session_state.page == "main":
     if seller:
         st.session_state.page = "seller"
 
-# Fetch data from Backblaze and Preview to ensure its loaded
+# Fetch data from Backblaze
 data = fetch_data()
 if data is not None:
     st.write("Data loaded successfully.")
     st.dataframe(data.head())
 
-# Placeholder for Buyer 
+# Buyer Page
 if st.session_state.page == "buyer":
-    #Start Code here for Buyer side, replace the code below.
-    st.write("Buyer window placeholder. Replace with  implementation.")
+    st.header("Explore Listings in Austin, Texas")
+    if data is not None:
+        if 'latitude' in data.columns and 'longitude' in data.columns:
+            # Add interactivity with Pydeck
+            st.pydeck_chart(pdk.Deck(
+                map_style='mapbox://styles/mapbox/streets-v11',
+                initial_view_state=pdk.ViewState(
+                    latitude=data['latitude'].mean(),
+                    longitude=data['longitude'].mean(),
+                    zoom=10,
+                    pitch=50,
+                ),
+                layers=[
+                    pdk.Layer(
+                        'ScatterplotLayer',
+                        data=data,
+                        get_position='[longitude, latitude]',
+                        get_color='[200, 30, 0, 160]',
+                        get_radius=200,
+                        pickable=True
+                    )
+                ],
+                tooltip={
+                    "html": "<b>Listing Name:</b> {name}<br/><b>Amenities:</b> {amenities}<br/><b>Price:</b> {price}",
+                    "style": {
+                        "backgroundColor": "steelblue",
+                        "color": "white"
+                    }
+                }
+            ))
+        else:
+            st.error("The dataset does not contain 'latitude' and 'longitude' columns.")
 
-#Rough Draft Seller
+# Rough Draft Seller
 elif st.session_state.page == "seller":
-    st.header("Estimate Your Airbnb Listing Review Score")
+    # Sidebar for Seller Input Form
+    st.sidebar.title("Seller's Property Details")
+    property_types = ["House", "Apartment", "Condo", "Townhouse"]
+    price_ranges = ["$10 - $500", "$500 - $1000", "$1000- $5000", "$5000 - $10000", "$10000 - $50000"]
 
-    # Text inputs for seller
-    neighborhood_overview = st.text_input("Neighborhood Overview")
-    host_neighborhood = st.text_input("Host Neighborhood")
-    property_type = st.text_input("Property Type")
-    amenities = st.text_input("Included Amenities (comma separated)")
-    price = st.text_input("Price")
+    # Dropdown for Property Type
+    property_type = st.sidebar.selectbox("Property Type", property_types)
 
-    # Drop-down inputs for seller
-    bedrooms = st.selectbox("Number of Bedrooms", [1, 2, 3, 4, 5])
-    bathrooms = st.selectbox("Number of Bathrooms", [1, 2, 3, 4, 5])
-    beds = st.selectbox("Number of Beds", [1, 2, 3, 4, 5])
+    # Dropdown for Price Range
+    price_range = st.sidebar.selectbox("Price Range", price_ranges)
 
-    if st.button("Generate Review Score"):
-        # Generate a random score out of 5
-        #This will be replaced with a proper predictive model
-        review_score = round(random.uniform(1, 5), 2)
-        st.success(f"Estimated Review Score: {review_score} out of 5")
+    # Number inputs for Bedrooms, Bathrooms, Beds, etc.
+    bedrooms = st.sidebar.number_input("Number of Bedrooms", min_value=1, max_value=10, value=1)
+    bathrooms = st.sidebar.number_input("Number of Bathrooms", min_value=1, max_value=10, value=1)
+    beds = st.sidebar.number_input("Number of Beds", min_value=1, max_value=10, value=1)
 
+    # Flag to check if the submit button has been clicked
+    submitted = st.sidebar.button("Submit Property")
 
-    # Back button to go back to main page
-    if st.button("Back"):
-        st.session_state.page = "main"
+    # Main Page Content
+    if not submitted:
+        # Display introductory text only if not submitted
+        st.title("Seller's Property Submission")
+        st.write("Fill in the property details on the sidebar to submit your listing.")
+    else:
+        # Display submitted property details
+        st.markdown("### Property Details Submitted")
+        st.write(f"**Property Type:** {property_type}")
+        st.write(f"**Price Range:** {price_range}")
+        st.write(f"**Bedrooms:** {bedrooms}")
+        st.write(f"**Bathrooms:** {bathrooms}")
+        st.write(f"**Beds:** {beds}")
+
+        # Generate and display a prominent random score
+        random_score = random.randint(1, 5)
+        st.markdown(f"## 🔥 **Predicted Score: {random_score}** 🔥")
+
+# Back button to go back to main page
+if st.button("Back"):
+    st.session_state.page = "main"
