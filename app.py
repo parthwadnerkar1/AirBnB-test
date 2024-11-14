@@ -55,39 +55,49 @@ if data is not None:
 
 # Buyer Page
 if st.session_state.page == "buyer":
-    st.header("Explore Listings in Austin, Texas")
-    if data is not None:
-        if 'latitude' in data.columns and 'longitude' in data.columns:
-            # Add interactivity with Pydeck
-            st.pydeck_chart(pdk.Deck(
-                map_style='mapbox://styles/mapbox/streets-v11',
-                initial_view_state=pdk.ViewState(
-                    latitude=data['latitude'].mean(),
-                    longitude=data['longitude'].mean(),
-                    zoom=10,
-                    pitch=50,
-                ),
-                layers=[
-                    pdk.Layer(
-                        'ScatterplotLayer',
-                        data=data,
-                        get_position='[longitude, latitude]',
-                        get_color='[200, 30, 0, 160]',
-                        get_radius=200,
-                        pickable=True
-                    )
-                ],
-                tooltip={
-                    "html": "<b>Listing Name:</b> {name}<br/><b>Amenities:</b> {amenities}<br/><b>Price:</b> {price}",
-                    "style": {
-                        "backgroundColor": "steelblue",
-                        "color": "white"
-                    }
-                }
-            ))
-        else:
-            st.error("The dataset does not contain 'latitude' and 'longitude' columns.")
+    st.header("Explore Listings on Map")
 
+    # Filter rows with valid latitude and longitude
+    data_clean = data.dropna(subset=["latitude", "longitude"])
+
+    # Create a list of properties to be used in the map
+    properties = []
+    for index, row in data_clean.iterrows():
+        properties.append({
+            "name": row["NAME"],
+            "price": row["Price"],
+            "neighborhood": row["Host Neighbourhood"],
+            "latitude": row["latitude"],
+            "longitude": row["longitude"]
+        })
+
+    # Create Pydeck Map with property listings and markers
+    deck = pdk.Deck(
+        map_style="mapbox://styles/mapbox/streets-v11",
+        initial_view_state=pdk.ViewState(
+            latitude=data_clean["latitude"].mean(),
+            longitude=data_clean["longitude"].mean(),
+            zoom=10,
+            pitch=50,
+        ),
+        layers=[
+            pdk.Layer(
+                "ScatterplotLayer",
+                data=properties,
+                get_position=["longitude", "latitude"],
+                get_color="[200, 30, 0, 160]",
+                get_radius=180,
+                pickable=True
+            )
+        ],
+        tooltip={
+            "html": "<b>Listing Name:</b> {name}<br/><b>Price:</b> {price}<br/><b>Neighborhood:</b> {neighborhood}",
+            "style": {"backgroundColor": "steelblue", "color": "white"}
+        }
+    )
+
+    st.pydeck_chart(deck)
+    
 # Rough Draft Seller
 elif st.session_state.page == "seller":
     # Sidebar for Seller Input Form
