@@ -57,19 +57,20 @@ if data is not None:
 if st.session_state.page == "buyer":
     st.header("Explore Listings on Map")
 
-    # Filter rows with valid latitude and longitude
-    data_clean = data.dropna(subset=["latitude", "longitude"])
+    # Filter rows with valid latitude, longitude, name, and price
+    data_clean = data.dropna(subset=["latitude", "longitude", "NAME", "Price"])
 
     # Create a list of properties to be used in the map
     properties = []
     for index, row in data_clean.iterrows():
-        properties.append({
-            "name": row["NAME"],
-            "price": row["Price"],
-            "neighborhood": row["Host Neighbourhood"],
-            "latitude": row["latitude"],
-            "longitude": row["longitude"]
-        })
+        if row["NAME"] and row["Price"]:  # Ensure both name and price are present
+            properties.append({
+                "name": row["NAME"],
+                "price": row["Price"],
+                "neighborhood": row["Host Neighbourhood"],
+                "latitude": row["latitude"],
+                "longitude": row["longitude"]
+            })
 
     # Create Pydeck Map with property listings and markers
     deck = pdk.Deck(
@@ -91,7 +92,7 @@ if st.session_state.page == "buyer":
             )
         ],
         tooltip={
-            "html": "<b>Listing Name:</b> {name}<br/><b>Price:</b> {price}<br/><b>Neighborhood:</b> {neighborhood}",
+            "html": "<b>Listing Name:</b> {name}<br/><b>Price:</b>{price}<br/><b>Neighborhood:</b> {neighborhood}",
             "style": {"backgroundColor": "steelblue", "color": "white"}
         }
     )
