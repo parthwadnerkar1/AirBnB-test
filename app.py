@@ -16,7 +16,7 @@ load_dotenv()
 
 # Set Backblaze connection
 b2 = B2(
-    endpoint=os.getenv('B2_ENDPOINT', 's3.us-east-005.backblazeb2.com'),
+    endpoint=os.getenv('B2_ENDPOINT'),
     key_id=os.getenv('B2_KEYID'),
     secret_key=os.getenv('B2_APPKEY')
 )
@@ -24,8 +24,8 @@ b2 = B2(
 @st.cache_data
 def fetch_data():
     try:
-        b2.set_bucket('AirBnB-CSV')  # Set the bucket
-        obj = b2.get_object('Airbnb Dataset_Long.csv')  # Use the EXACT file name
+        b2.set_bucket('B2_BUCKETNAME')  # Set the bucket
+        obj = b2.get_object('Final_PROJ.xlsx')  # Use the EXACT file name
         return pd.read_csv(obj)
     except Exception as e:
         st.error(f"Error fetching data from Backblaze: {e}")
