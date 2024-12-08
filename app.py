@@ -15,6 +15,9 @@ from io import BytesIO
 # Add the utils directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'utils')))
 
+# Streamlit page configuration
+st.set_page_config(page_title="Airbnb Data Viewer", layout="wide", initial_sidebar_state="expanded")
+
 # Load environment variables
 load_dotenv()
 
@@ -23,6 +26,7 @@ endpoint = os.getenv("B2_ENDPOINT")
 key_id = os.getenv("B2_KEYID")
 app_key = os.getenv("B2_APPKEY")
 bucket_name = os.getenv("B2_BUCKETNAME")
+
 
 # Set up Backblaze connection
 b2 = B2(
