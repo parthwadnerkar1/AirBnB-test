@@ -145,7 +145,9 @@ def main():
         if tab == "Introduction":
             st.markdown('<p class="sub-title">Introduction</p>', unsafe_allow_html=True)
             st.markdown("""
-            <p class="markdown-text">Using this data, we aim to uncover insights into what makes an Airbnb listing successful.</p>
+            <p class="markdown-text">Using our app, we aim to uncover insights into what makes an Airbnb listing successful.
+            The Airbnb Data Viewer serves as an interactive tool for users to explore insights into Airbnb listings. 
+            It is particularly focused on helping two main audiences: buyers seeking suitable properties and sellers (hosts) aiming to optimize their listings for better customer satisfaction and ratings.</p>
             """, unsafe_allow_html=True)
 
         elif tab == "Goals and Approach":
@@ -153,14 +155,20 @@ def main():
             st.markdown("""
             <p class="markdown-text">
             Our Goals:
+            
             - Understand the factors that lead to higher ratings and greater foot traffic.
+            
             - Explore the influence of location and neighborhoods on reviews and ratings.
+            
             - Identify specific amenities that contribute to higher reviews.
+            
             - Evaluate if pricing strategies impact success.
 
             Our Approach:
             - Compare locations and neighborhoods to identify "hotspots" that are favored by users.
+            
             - Assess the role of amenities in improving customer satisfaction.
+            
             - Analyze price ranges to find the "sweet spot" that attracts the most guests.
             </p>
             """, unsafe_allow_html=True)
@@ -328,3 +336,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
