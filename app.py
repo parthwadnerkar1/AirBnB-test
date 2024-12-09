@@ -12,7 +12,7 @@ from utils.b2 import B2
 from dotenv import load_dotenv
 from io import BytesIO
 
-# Streamlit page configuration (must be the first Streamlit command)
+# Set the page config for a wide layout
 st.set_page_config(page_title="Airbnb Data Viewer", layout="wide", initial_sidebar_state="expanded")
 
 # Add the utils directory to the Python path
@@ -27,8 +27,6 @@ key_id = os.getenv("B2_KEYID")
 app_key = os.getenv("B2_APPKEY")
 bucket_name = os.getenv("B2_BUCKETNAME")
 
-
-
 # Set up Backblaze connection
 b2 = B2(
     endpoint=endpoint,
@@ -36,11 +34,12 @@ b2 = B2(
     secret_key=app_key
 )
 
+
 @st.cache_data 
 def fetch_data():
     try:
-        b2.set_bucket(bucket_name)  
-        obj = b2.get_object('Final_PROJ.xlsx')  # Use Exact Name of File
+        b2.set_bucket(os.getenv('B2_BUCKETNAME'))  
+        obj = b2.get_object('Final_PROJ.xlsx')  # Name of File
 
         # Convert the StreamingBody object to a BytesIO object
         file_content = obj.read()  # Read the content of the StreamingBody
@@ -66,7 +65,7 @@ except FileNotFoundError:
     st.stop()
 
 # Streamlit UI
-st.title("Airbnb Data Viewer")
+#st.title("Airbnb Data Viewer")
 
 # Initialize session state variables
 if 'page' not in st.session_state:
@@ -77,9 +76,6 @@ if 'submitted' not in st.session_state:
 
 # Main application function
 def main():
-    # Set the page config for a wide layout
-    st.set_page_config(page_title="Airbnb Data Viewer", layout="wide", initial_sidebar_state="expanded")
-
     # CSS styling
     st.markdown("""
         <style>
@@ -259,32 +255,76 @@ def main():
 
     # Seller Page
     elif navigation == "Seller Page":
-        st.sidebar.title("Seller's Property Details")
+        st.header("Seller Page")
 
         # User inputs for prediction
-        accommodates = st.sidebar.number_input("Accommodates", min_value=1, step=1)
-        bathrooms = st.sidebar.number_input("Bathrooms", min_value=0.0, step=0.1)
-        bedrooms = st.sidebar.number_input("Bedrooms", min_value=0, step=1)
-        price = st.sidebar.number_input("Price ($)", min_value=0, step=1)
-        property_type = st.sidebar.selectbox("Property Type", options=["House", "Apartment", "Condo", "Studio"])
+        accommodates = st.number_input("Accommodates", min_value=1, step=1)
+        bathrooms = st.number_input("Bathrooms", min_value=0.5, step=0.5)
+        bedrooms = st.number_input("Bedrooms", min_value=1, step=1)
+        beds = st.number_input("Beds", min_value=1, step=1)
+        price = st.number_input("Price (USD)", min_value=10, step=1)
+        neighborhood_overview = st.text_area("Neighborhood Overview")
+        host_neighborhood = st.text_area("Host Neighborhood Description")
+        amenities = st.text_area("Amenities")
+        property_type = st.selectbox("Property Type", ["Apartment", "House", "Condo", "unknown"])
 
-        predict_button = st.sidebar.button("Predict Review Score")
+        # Sentiment Analysis
+        analyzer = SentimentIntensityAnalyzer()
+        neighborhood_sentiment = get_sentiment_score(neighborhood_overview, analyzer)
+        host_neighborhood_sentiment = get_sentiment_score(host_neighborhood, analyzer)
+        amenities_sentiment = get_sentiment_score(amenities, analyzer)
 
-        if predict_button:
-            # Get sentiment analysis score
-            analyzer = SentimentIntensityAnalyzer()
-            sentiment_score = get_sentiment_score("Example review text", analyzer)
+        # Prepare input data for prediction
+        input_data = pd.DataFrame({
+            'accommodates': [accommodates],
+            'bathrooms': [bathrooms],
+            'bedrooms': [bedrooms],
+            'beds': [beds],
+            'price': [price],
+            'neighborhood_sentiment': [neighborhood_sentiment],
+            'host_neighbourhood_sentiment': [host_neighborhood_sentiment],
+            'amenities_sentiment': [amenities_sentiment],
+            'property_type': [property_type]
+        })
 
-            # Encoding property type
-            property_type_encoded = encode_property_type(property_type)
+        # One-hot encode 'property_type'
+        input_data_encoded = encode_property_type(input_data)
 
-            # Prepare features for prediction
-            features = [accommodates, bathrooms, bedrooms, price, property_type_encoded, sentiment_score]
-            scaled_features = scaler.transform([features])
+        # Ensure the input data has all columns expected by the model
+        for missing_feature in expected_features:
+            if missing_feature not in input_data_encoded.columns:
+                if 'property_type' in missing_feature:
+                    # Add missing property type columns with a default value of 0
+                    input_data_encoded[missing_feature] = 0
+                else:
+                    # Add missing numerical features with a default value of 0
+                    input_data_encoded[missing_feature] = 0
+
+        # Reorder columns to match the expected features
+        input_data_encoded = input_data_encoded[expected_features]
+
+        # Add button to submit input data
+        if st.button("Predict Review Score"):
+            # Standardize features
+            try:
+                input_data_scaled = scaler.transform(input_data_encoded)
+            except ValueError as e:
+                st.error(f"Error during feature scaling: {e}")
+                st.stop()
 
             # Make prediction
-            predicted_score = model.predict(scaled_features)[0]
-            st.write(f"Predicted Review Score: {predicted_score:.2f}")
+            predicted_score = model.predict(input_data_scaled)[0]
+
+            st.subheader("Predicted Review Score")
+            st.write(f"The predicted review score for your listing is: {predicted_score:.2f}")
+            
+             # Footer
+    st.markdown("""
+        <div class="footer">
+            <p>Made by Nathan, Parth, Diya & Arsh | 2024</p>
+        </div>
+    """, unsafe_allow_html=True)
+
 
 if __name__ == "__main__":
     main()
